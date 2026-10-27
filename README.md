@@ -1,6 +1,4 @@
-# aie-faultline
-
-**AI-powered failure analysis for distributed systems.**
+# AI Engineering: Failure Analysis for Distributed Systems
 
 > **Status:** early development. APIs and configuration will change.
 
