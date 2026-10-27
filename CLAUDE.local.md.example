@@ -1,0 +1,23 @@
+<!--
+Template for CLAUDE.local.md, a personal, gitignored file read by Claude Code.
+Team members: copy this to CLAUDE.local.md and follow the setup steps in the
+internal repo. Never commit CLAUDE.local.md.
+This example is committed to a public repo, so keep it generic.
+-->
+
+# Local instructions (private: gitignored, never commit)
+
+## Internal planning docs
+
+Internal planning material is cloned at `.internal/` inside this repo.
+
+- Design and plan documents: `.internal/docs/`
+
+Before starting a task, read the relevant internal docs. Work through the plan in order and flag any deviation before making it.
+
+## Rules for private material
+
+- Never copy or closely paraphrase content from `.internal/` into any tracked file: code, comments, docs, README, test fixtures, commit messages, PR or issue text, or `CLAUDE.md`.
+- Write public code and docs in generic technical terms.
+- `.internal/` is its own git repository. Commit changes to it from inside `.internal/` (`git -C .internal ...`). Never `git add .internal` and never use `git add -f`.
+- Review `git diff --cached` for leaked private details before every commit or push.
