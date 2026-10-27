@@ -1,0 +1,19 @@
+[project]
+name = "aie-faultline-agent"
+version = "0.0.0"
+description = "Investigation agent that proposes likely root causes."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ["aie-faultline-core", "aie-faultline-llm", "aie-faultline-tools"]
+
+[build-system]
+requires = ["uv_build>=0.11.20,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "faultline_agent"
+
+[tool.uv.sources]
+aie-faultline-core = { workspace = true }
+aie-faultline-llm = { workspace = true }
+aie-faultline-tools = { workspace = true }

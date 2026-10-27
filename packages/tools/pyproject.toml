@@ -1,0 +1,20 @@
+[project]
+name = "aie-faultline-tools"
+version = "0.0.0"
+description = "Read-only investigation tools with typed inputs and outputs."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ["aie-faultline-core", "aie-faultline-detect", "aie-faultline-correlate", "aie-faultline-knowledge"]
+
+[build-system]
+requires = ["uv_build>=0.11.20,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "faultline_tools"
+
+[tool.uv.sources]
+aie-faultline-core = { workspace = true }
+aie-faultline-detect = { workspace = true }
+aie-faultline-correlate = { workspace = true }
+aie-faultline-knowledge = { workspace = true }

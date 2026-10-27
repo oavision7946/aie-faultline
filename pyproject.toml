@@ -1,7 +1,56 @@
 [project]
 name = "aie-faultline"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.0.0"
+description = "AI-powered failure analysis for distributed systems."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
+
+[dependency-groups]
+dev = ["pytest", "ruff", "mypy", "aie-faultline-core", "aie-faultline-llm", "aie-faultline-datasets", "aie-faultline-replay", "aie-faultline-ingest", "aie-faultline-detect", "aie-faultline-correlate", "aie-faultline-knowledge", "aie-faultline-tools", "aie-faultline-agent", "aie-faultline-evals", "aie-faultline-cli", "aie-faultline-api"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*", "apps/*"]
+exclude = ["apps/ui"]
+
+[tool.uv.sources]
+aie-faultline-core = { workspace = true }
+aie-faultline-llm = { workspace = true }
+aie-faultline-datasets = { workspace = true }
+aie-faultline-replay = { workspace = true }
+aie-faultline-ingest = { workspace = true }
+aie-faultline-detect = { workspace = true }
+aie-faultline-correlate = { workspace = true }
+aie-faultline-knowledge = { workspace = true }
+aie-faultline-tools = { workspace = true }
+aie-faultline-agent = { workspace = true }
+aie-faultline-evals = { workspace = true }
+aie-faultline-cli = { workspace = true }
+aie-faultline-api = { workspace = true }
+
+[tool.pytest.ini_options]
+# Bare `pytest` runs component unit tests only. Run the other suites by path:
+#   pytest apps/api/tests | tests/integration | tests/e2e
+testpaths = ["packages", "apps/cli"]
+addopts = "--import-mode=importlib --strict-markers"
+markers = [
+    "api: API tests",
+    "integration: tests that need external services",
+    "e2e: end-to-end tests",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["packages/*/src", "apps/*/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+strict = true
+explicit_package_bases = true
+mypy_path = "packages/core/src:packages/llm/src:packages/datasets/src:packages/replay/src:packages/ingest/src:packages/detect/src:packages/correlate/src:packages/knowledge/src:packages/tools/src:packages/agent/src:packages/evals/src:apps/cli/src:apps/api/src"
+exclude = ["^\\.venv/", "^\\.internal/"]

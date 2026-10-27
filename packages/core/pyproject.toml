@@ -1,0 +1,14 @@
+[project]
+name = "aie-faultline-core"
+version = "0.0.0"
+description = "Domain models, identifiers and shared configuration support."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.11.20,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "faultline_core"

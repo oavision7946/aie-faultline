@@ -44,12 +44,15 @@ cp .env.example .env        # add your API keys
 ## Development
 
 ```bash
-uv run pytest tests/unit    # unit tests
-uv run ruff check .         # lint
-uv run mypy .               # static analysis
+uv run pytest                    # component unit tests only
+uv run pytest apps/api/tests     # API tests (separate suite)
+uv run pytest tests/integration  # integration tests (separate suite)
+uv run pytest tests/e2e          # end-to-end tests (separate suite)
+uv run ruff check .              # lint
+uv run mypy .                    # static analysis
 ```
 
-<!-- TODO: confirm commands; describe how to run API/UI tests, which are kept separate from unit tests -->
+Component unit tests run with a bare `pytest`. API, UI, integration, and end-to-end tests are kept in separate folders and run by path, as shown above. The UI suite will follow once a UI exists.
 
 ## Documentation
 

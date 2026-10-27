@@ -1,0 +1,2 @@
+# LLM provider and model definitions.
+# Contains no secrets: secrets belong in .env files, which are never committed.

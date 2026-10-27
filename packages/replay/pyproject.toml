@@ -1,0 +1,17 @@
+[project]
+name = "aie-faultline-replay"
+version = "0.0.0"
+description = "Event-time replay of recorded log and trace data."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ["aie-faultline-core"]
+
+[build-system]
+requires = ["uv_build>=0.11.20,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "faultline_replay"
+
+[tool.uv.sources]
+aie-faultline-core = { workspace = true }

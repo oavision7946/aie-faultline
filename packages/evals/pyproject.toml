@@ -1,0 +1,26 @@
+[project]
+name = "aie-faultline-evals"
+version = "0.0.0"
+description = "Metrics and evaluation harness."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ["aie-faultline-core", "aie-faultline-llm", "aie-faultline-datasets", "aie-faultline-replay", "aie-faultline-ingest", "aie-faultline-detect", "aie-faultline-correlate", "aie-faultline-knowledge", "aie-faultline-tools", "aie-faultline-agent"]
+
+[build-system]
+requires = ["uv_build>=0.11.20,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "faultline_evals"
+
+[tool.uv.sources]
+aie-faultline-core = { workspace = true }
+aie-faultline-llm = { workspace = true }
+aie-faultline-datasets = { workspace = true }
+aie-faultline-replay = { workspace = true }
+aie-faultline-ingest = { workspace = true }
+aie-faultline-detect = { workspace = true }
+aie-faultline-correlate = { workspace = true }
+aie-faultline-knowledge = { workspace = true }
+aie-faultline-tools = { workspace = true }
+aie-faultline-agent = { workspace = true }

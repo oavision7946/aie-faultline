@@ -243,3 +243,6 @@ build/
 *.sqlite
 *.db
 .DS_Store
+
+# --- Local data (never commit) ---
+/data/

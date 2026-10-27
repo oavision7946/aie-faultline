@@ -1,0 +1,2 @@
+# Settings overlay for the dev environment.
+# Contains no secrets: secrets belong in .env files, which are never committed.

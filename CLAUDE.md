@@ -14,16 +14,17 @@ AI-powered failure analysis for distributed systems: ingest logs and traces, and
 
 ## Commands
 
-<!-- TODO: confirm these match the repo once the layout exists -->
-
 ```bash
 uv sync                          # install dependencies
-uv run pytest tests/unit         # unit tests
+uv run pytest                    # component unit tests only
+uv run pytest apps/api/tests     # API tests (separate suite)
+uv run pytest tests/integration  # integration tests (separate suite)
+uv run pytest tests/e2e          # end-to-end tests (separate suite)
 uv run ruff check .              # lint
 uv run mypy .                    # static analysis
 ```
 
-API and UI tests live apart from unit tests and are run separately.
+API, UI, integration, and end-to-end tests live apart from component unit tests and are run separately.
 
 ## Conventions
 
