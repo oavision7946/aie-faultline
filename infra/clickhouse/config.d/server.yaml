@@ -1,0 +1,8 @@
+# Server settings for the local ClickHouse container.
+# The container memory limit is set in config/*.yaml (clickhouse.memory_limit);
+# ClickHouse derives its own cap from the cgroup limit using this ratio.
+max_server_memory_usage_to_ram_ratio: 0.9
+listen_host: 0.0.0.0   # inside the container only; published ports are bound by compose
+logger:
+  level: warning
+  console: 1

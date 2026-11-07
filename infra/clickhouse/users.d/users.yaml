@@ -1,0 +1,30 @@
+# Users and profiles. Passwords and limits are read from environment variables
+# set by `faultline stack up`; no secret appears in this file.
+profiles:
+  writer:
+    max_memory_usage: 0
+  readonly:
+    readonly: 1
+    max_execution_time: {"@from_env": CLICKHOUSE_RO_MAX_EXECUTION_TIME}
+    max_result_rows: {"@from_env": CLICKHOUSE_RO_MAX_RESULT_ROWS}
+    result_overflow_mode: throw
+    max_rows_to_read: {"@from_env": CLICKHOUSE_RO_MAX_ROWS_TO_READ}
+    read_overflow_mode: throw
+    max_memory_usage: {"@from_env": CLICKHOUSE_RO_MAX_MEMORY_USAGE}
+
+users:
+  # The image's passwordless default user is removed.
+  default:
+    "@remove": remove
+  faultline_writer:
+    password: {"@from_env": CLICKHOUSE_WRITER_PASSWORD}
+    profile: writer
+    quota: default
+    networks:
+      ip: ["::/0"]
+  faultline_readonly:
+    password: {"@from_env": CLICKHOUSE_READONLY_PASSWORD}
+    profile: readonly
+    quota: default
+    networks:
+      ip: ["::/0"]
