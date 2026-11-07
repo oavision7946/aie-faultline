@@ -6,6 +6,40 @@
 
 aie-faultline ingests logs and traces from distributed systems and uses LLMs to help engineers find the likely root cause of a failure faster.
 
+### The problem
+
+When a distributed system fails, the signal is buried. The engineer on call faces thousands of log lines, traces and metrics spread across many services, and the component raising the loudest alarm is often not the one that broke. aie-faultline turns that noise into a short, evidence-backed hypothesis: what is abnormal, where it started, why it most likely happened, and what to check next.
+
+### How it works
+
+aie-faultline works in layers, so each kind of work goes to the right tool:
+
+- **Always-on detection.** Lightweight models watch the telemetry stream and flag behavior that looks abnormal.
+- **Correlation.** Service topology and timing link signals across components, showing where a failure began and how it spread.
+- **Investigation.** An LLM-driven agent is brought in only for incidents that matter. It decides which evidence to pull, tests competing explanations, and reports a conclusion linked to the exact log records and traces behind it.
+
+Reasoning is reserved for the moments that need it, so no LLM ever has to read every log line.
+
+### The questions it answers
+
+1. **Is something wrong?** Spot abnormal behavior early.
+2. **What kind of failure is it?** Put the problem in a known category.
+3. **Where is it?** Rank the components most likely involved.
+4. **What started it?** Separate the initiating cause from the symptoms that followed. The first component to look unhealthy is a clue, not proof.
+5. **What should an engineer do next?** Suggest next steps with a confidence level. It recommends; it never changes the system.
+
+### Built on open data
+
+The project is developed and evaluated against public datasets of logs, traces, metrics and labeled incidents. Those datasets are replayed in event time as if they were live, so anyone can reproduce the results without access to a production system.
+
+### Principles
+
+- **Evidence first.** Every claim points to records you can inspect yourself.
+- **The right model for the job.** Inexpensive models run continuously; expensive reasoning runs on demand.
+- **Honest about uncertainty.** Answers come with a confidence level, and the system says so when the evidence is not enough.
+- **Recommend, don't act.** Diagnosis and remediation stay separate, and people stay in control.
+- **Logs are untrusted input.** Investigation tools are read-only, and log text is treated as data, never as instructions.
+
 ## Features
 
 Implemented so far:
