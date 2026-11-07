@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_FROZEN: "1"
+  FAULTLINE_ENV: ci
+
+jobs:
+  components:
+    name: List components
+    runs-on: ubuntu-latest
+    outputs:
+      unit: ${{ steps.list.outputs.unit }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - id: list
+        run: |
+          unit=$(uv run python scripts/repo_checks.py list --json \
+            | python3 -c 'import json,sys; print(json.dumps([c for c in json.load(sys.stdin) if c != "apps/api"]))')
+          echo "unit=$unit" >> "$GITHUB_OUTPUT"
+
+  lint-static:
+    name: Lint and static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - run: make lock-check
+      - run: make format-check
+      - run: make lint
+      - run: make typecheck
+      - run: make static-analysis
+      - run: make repo-checks
+      - run: make test-scripts
+
+  unit:
+    name: Unit tests (${{ matrix.component }})
+    needs: components
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        component: ${{ fromJSON(needs.components.outputs.unit) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - run: make test-component C=${{ matrix.component }}
+
+  api:
+    name: API tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - run: make test-api
+
+  ui:
+    name: UI tests (reserved)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: make test-ui
+
+  docs:
+    name: Docs and component checklist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - run: make docs
+      - run: uv run python scripts/repo_checks.py components
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: gitleaks (full history)
+        run: >
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.18.4
+          detect --source /repo --redact --no-banner
+
+  integration:
+    name: Integration (ClickHouse + Postgres)
+    runs-on: ubuntu-latest
+    env:
+      # Local-stack credentials only: the Supabase local database uses its documented
+      # development defaults, and ClickHouse passwords are generated per run.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 3.0.0
+      - name: Generate per-run ClickHouse passwords
+        run: |
+          for var in CLICKHOUSE_WRITER_PASSWORD CLICKHOUSE_READONLY_PASSWORD; do
+            value=$(openssl rand -hex 24)
+            echo "::add-mask::$value"
+            echo "$var=$value" >> "$GITHUB_ENV"
+          done
+      - run: make up
+      - run: make reset-gate
+      - run: make test-integration
+      - if: always()
+        run: make down
