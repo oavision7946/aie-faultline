@@ -1,0 +1,15 @@
+name: Decision proposal
+description: Propose a change to a platform or architecture decision.
+labels: ["type:adr"]
+body:
+  - type: textarea
+    id: context
+    attributes: {label: Context}
+    validations: {required: true}
+  - type: textarea
+    id: options
+    attributes: {label: Options considered}
+    validations: {required: true}
+  - type: textarea
+    id: proposal
+    attributes: {label: Proposed decision}

@@ -1,0 +1,17 @@
+name: Bug
+description: Something does not work as documented.
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: what
+    attributes: {label: What happened?, description: Include the command and its output.}
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes: {label: What did you expect?}
+    validations: {required: true}
+  - type: input
+    id: env
+    attributes: {label: Environment, description: "OS, architecture, `uv --version`, configuration environment"}
+  - type: markdown
+    attributes: {value: "Do not paste secrets, private logs or customer data."}

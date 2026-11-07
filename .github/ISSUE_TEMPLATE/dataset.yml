@@ -1,0 +1,18 @@
+name: Dataset
+description: Add a public dataset.
+labels: ["type:dataset"]
+body:
+  - type: input
+    id: source
+    attributes: {label: Source URL}
+    validations: {required: true}
+  - type: input
+    id: license
+    attributes: {label: License and required citation}
+    validations: {required: true}
+  - type: input
+    id: size
+    attributes: {label: Size (compressed and extracted)}
+  - type: textarea
+    id: loader
+    attributes: {label: Loader notes, description: Format, label fields, known pitfalls}

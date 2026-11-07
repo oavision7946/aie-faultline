@@ -2,68 +2,67 @@
 
 > **Status:** early development. APIs and configuration will change.
 
-<!-- TODO: badges (CI, license, Python version) -->
-
 ## What it does
 
 aie-faultline ingests logs and traces from distributed systems and uses LLMs to help engineers find the likely root cause of a failure faster.
 
-<!-- TODO: add a short demo, screenshot, or example output -->
-
 ## Features
 
-<!-- TODO: list only what is implemented today -->
+Implemented so far:
 
-- TODO
+- A `uv` workspace of components, each with unit tests, linting, strict type checking and documentation
+- Typed YAML configuration with per-environment overlays and fail-fast secret handling
+- A YAML registry of LLM providers and models (Anthropic, OpenAI, local OpenAI-compatible servers)
+- A local service stack: ClickHouse with separate writer and read-only users, and PostgreSQL with pgvector
 
 ## Requirements
 
-- Python (TODO: minimum version)
-- [uv](https://docs.astral.sh/uv/) for dependency and environment management
-- ClickHouse and PostgreSQL with pgvector (TODO: document local setup)
+- Python 3.13 and [uv](https://docs.astral.sh/uv/)
+- Docker with Compose, and the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
 - An API key for at least one LLM provider, or a local open-source model
+- GNU Make
 
 ## Quickstart
 
 ```bash
-git clone https://github.com/<org>/aie-faultline.git
+git clone https://github.com/oavision7946/aie-faultline.git
 cd aie-faultline
-uv sync
-cp .env.example .env        # add your API keys
-# TODO: first command to run the project
+cp .env.example .env        # fill in the values
+make setup                  # dependencies, git hooks, prerequisite check
+make up                     # start ClickHouse and PostgreSQL
+make check                  # the full local quality gate
 ```
+
+See [docs/runbooks/local-setup.md](docs/runbooks/local-setup.md) for details and troubleshooting.
 
 ## Configuration
 
-- **Settings** are YAML files in `config/`.
-- **Secrets** (API keys and other credentials) go in `.env`, which is never committed.
-- **LLM providers** (Anthropic, OpenAI, local open-source models) are defined in an external YAML file, so you can switch providers without code changes.
-
-<!-- TODO: link to full configuration reference in docs/ -->
+- **Settings** are YAML files in `config/`: `app.yaml` plus overlays in `config/environments/` (`dev`, `lab`, `ci`). Select one with `make env-use ENV=dev`.
+- **Machine-specific values** go in `config/local/`, which is git-ignored.
+- **Secrets** (API keys and other credentials) go in `.env`, which is never committed. YAML names the variable; `.env.example` lists them all.
+- **LLM providers** are defined in `config/llm/providers.yaml`, so you can switch providers and models without code changes.
 
 ## Development
 
 ```bash
-uv run pytest                    # component unit tests only
-uv run pytest apps/api/tests     # API tests (separate suite)
-uv run pytest tests/integration  # integration tests (separate suite)
-uv run pytest tests/e2e          # end-to-end tests (separate suite)
-uv run ruff check .              # lint
-uv run mypy .                    # static analysis
+make help              # all targets
+make check             # format, lint, type check, security analysis, repository checks, unit tests
+make test-api          # API tests (separate suite)
+make test-integration  # integration tests (needs `make up`)
+make docs              # build every component's docs with warnings as errors
 ```
 
-Component unit tests run with a bare `pytest`. API, UI, integration, and end-to-end tests are kept in separate folders and run by path, as shown above. The UI suite will follow once a UI exists.
+Component unit tests also run with a bare `uv run pytest`. API, UI, integration and end-to-end tests live in separate folders and run separately. New components are created with `uv run python scripts/new_component.py packages <name> --description "..."`.
 
 ## Documentation
 
-See the [`docs/`](docs/) folder. <!-- TODO -->
+- Each component has a `README.md` and a `docs/` folder.
+- Generic runbooks are in [`docs/runbooks/`](docs/runbooks/); dataset cards will be in [`docs/datasets/`](docs/datasets/).
 
 ## Contributing
 
-Contributions are welcome. Please open an issue to discuss larger changes before sending a pull request. Every component needs unit tests, linting, static analysis, and documentation.
-
-<!-- TODO: CONTRIBUTING.md, code of conduct -->
+Contributions are welcome. Please open an issue to discuss larger changes before sending a pull request. Every component needs unit tests, linting, static analysis, and documentation, and `make check` must pass.
 
 ## License
 
-<!-- TODO: choose a license and add a LICENSE file -->
+[MIT](LICENSE)
