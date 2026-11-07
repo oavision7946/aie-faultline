@@ -1,2 +1,88 @@
-# LLM provider and model definitions.
-# Contains no secrets: secrets belong in .env files, which are never committed.
+# LLM providers, models and routing profiles.
+# Contains no secrets: api_key_env names the environment variable that holds the key.
+# Overlays: config/llm/providers.<env>.yaml, then the git-ignored config/local/llm/providers.yaml
+# (use the local overlay to point the local provider at another host).
+
+providers:
+  - name: anthropic
+    type: anthropic
+    base_url: https://api.anthropic.com
+    api_key_env: ANTHROPIC_API_KEY
+    enabled_in: [dev, lab]
+
+  - name: openai
+    type: openai
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    enabled_in: []          # no models chosen yet
+
+  - name: local
+    type: local_openai_compatible
+    base_url: http://127.0.0.1:8000/v1
+    api_key_env: LOCAL_LLM_API_KEY
+    enabled_in: [lab]
+
+models:
+  - id: claude-opus-5-5
+    provider: anthropic
+    model_name: claude-opus-5-5
+    roles: [investigator, reference, judge]
+    context_window: 1000000
+    capabilities: {tool_calling: true, structured_output: true}
+    defaults: {max_output_tokens: 16000, timeout_s: 600, max_retries: 2}
+    pricing: {input_per_mtok: "4.00", output_per_mtok: "20.00", effective_date: 2026-10-06}
+
+  - id: claude-sonnet-5-5
+    provider: anthropic
+    model_name: claude-sonnet-5-5
+    roles: [investigator, triage]
+    context_window: 1000000
+    capabilities: {tool_calling: true, structured_output: true}
+    defaults: {max_output_tokens: 16000, timeout_s: 600, max_retries: 2}
+    pricing: {input_per_mtok: "2.00", output_per_mtok: "10.00", effective_date: 2026-10-06}
+
+  - id: claude-haiku-5-5
+    provider: anthropic
+    model_name: claude-haiku-5-5
+    roles: [triage]
+    context_window: 1000000
+    capabilities: {tool_calling: true, structured_output: true}
+    defaults: {max_output_tokens: 8000, timeout_s: 300, max_retries: 2}
+    # Prompts up to 100K tokens; longer prompts are billed at a higher rate.
+    pricing: {input_per_mtok: "0.10", output_per_mtok: "0.50", effective_date: 2026-10-06}
+
+  # Local models: context window and capability flags must be confirmed against
+  # the serving stack before use.
+  - id: qwen3.5-27b-q8
+    provider: local
+    model_name: Qwen/Qwen3.5-27B
+    roles: [investigator]
+    context_window: 131072
+    capabilities: {tool_calling: true, structured_output: true}
+    defaults: {max_output_tokens: 8000, timeout_s: 1800, max_retries: 1, temperature: 0.2}
+    pricing: {input_per_mtok: "0", output_per_mtok: "0", effective_date: 2026-11-07}
+    limits: {max_concurrency: 2}
+    local: {quantization: 8-bit, serving_stack: to-be-confirmed}
+
+  - id: qwen3.5-27b-q4
+    provider: local
+    model_name: Qwen/Qwen3.5-27B
+    roles: [investigator]
+    context_window: 131072
+    capabilities: {tool_calling: true, structured_output: true}
+    defaults: {max_output_tokens: 8000, timeout_s: 1800, max_retries: 1, temperature: 0.2}
+    pricing: {input_per_mtok: "0", output_per_mtok: "0", effective_date: 2026-11-07}
+    limits: {max_concurrency: 2}
+    local: {quantization: 4-bit, serving_stack: to-be-confirmed}
+
+profiles:
+  iterate:
+    triage: claude-haiku-5-5
+    investigator: claude-sonnet-5-5
+    judge: claude-opus-5-5
+  reference:
+    triage: claude-sonnet-5-5
+    investigator: claude-opus-5-5
+    judge: claude-opus-5-5
+  private_local:
+    investigator: qwen3.5-27b-q8
