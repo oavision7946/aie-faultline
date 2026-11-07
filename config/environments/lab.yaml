@@ -1,2 +1,9 @@
-# Settings overlay for the lab environment.
-# Contains no secrets: secrets belong in .env files, which are never committed.
+# Overlay for the lab environment (shared server, full datasets).
+# Contains no secrets and no host-specific addresses: put those in config/local/app.yaml.
+clickhouse:
+  memory_limit: 24g
+  readonly_limits:
+    max_memory_usage_bytes: 8589934592
+capacity:
+  min_free_disk_gb: 100
+  max_clickhouse_memory_fraction: 0.25

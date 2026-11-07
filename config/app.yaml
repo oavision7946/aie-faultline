@@ -1,2 +1,40 @@
-# Application settings.
-# Contains no secrets: secrets belong in .env files, which are never committed.
+# Application settings shared by every environment.
+# Overlays: config/environments/<env>.yaml, then the git-ignored config/local/app.yaml.
+# Contains no secrets: YAML names the environment variable, .env holds the value.
+
+# Address the local service containers publish their ports on.
+# Keep 127.0.0.1 unless a private-network address is set in config/local/app.yaml.
+bind_host: 127.0.0.1
+
+paths:
+  data_dir: data
+
+clickhouse:
+  image: clickhouse/clickhouse-server:26.3
+  host: 127.0.0.1
+  http_port: 8123
+  native_port: 9000
+  database: faultline
+  memory_limit: 4g
+  writer_user: faultline_writer
+  readonly_user: faultline_readonly
+  writer_password_env: CLICKHOUSE_WRITER_PASSWORD
+  readonly_password_env: CLICKHOUSE_READONLY_PASSWORD
+  readonly_limits:
+    max_execution_time_s: 30
+    max_result_rows: 100000
+    max_rows_to_read: 500000000
+    max_memory_usage_bytes: 4294967296
+
+postgres:
+  host: 127.0.0.1
+  port: 54322
+  shadow_port: 54320
+  database: postgres
+  user_env: POSTGRES_USER
+  password_env: POSTGRES_PASSWORD
+  allow_wildcard_bind: false
+
+capacity:
+  min_free_disk_gb: 20
+  max_clickhouse_memory_fraction: 0.5

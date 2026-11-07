@@ -1,2 +1,9 @@
-# Settings overlay for the ci environment.
-# Contains no secrets: secrets belong in .env files, which are never committed.
+# Overlay for the ci environment (hosted runners, tiny fixtures).
+# Contains no secrets.
+clickhouse:
+  memory_limit: 2g
+capacity:
+  min_free_disk_gb: 5
+postgres:
+  # Hosted CI runners are ephemeral and accept no inbound connections.
+  allow_wildcard_bind: true
