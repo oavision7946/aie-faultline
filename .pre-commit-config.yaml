@@ -1,5 +1,5 @@
-# Install once per clone:
-#   pre-commit install --hook-type pre-commit --hook-type commit-msg
+# Install once per clone (or run `make setup`):
+#   uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
 repos:
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.4   # pin to a release you have reviewed; update periodically
@@ -21,3 +21,41 @@ repos:
         entry: scripts/check_private_leaks.sh commit-msg
         language: script
         stages: [commit-msg]
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen ruff format --check
+        language: system
+        types: [python]
+        stages: [pre-commit]
+
+      - id: ruff-lint
+        name: ruff lint
+        entry: uv run --frozen ruff check
+        language: system
+        types: [python]
+        stages: [pre-commit]
+
+      - id: mypy
+        name: mypy (strict)
+        entry: uv run --frozen mypy .
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: repo-checks
+        name: component checklist, uv-only manifests, import boundaries
+        entry: uv run --frozen python scripts/repo_checks.py all
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: uv-lock
+        name: uv lockfile up to date
+        entry: uv lock --check
+        language: system
+        files: (^|/)(pyproject\.toml|uv\.lock)$
+        pass_filenames: false
+        stages: [pre-commit]

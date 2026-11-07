@@ -4,7 +4,17 @@ version = "0.0.0"
 description = "Command-line interface."
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["aie-faultline-core", "aie-faultline-datasets", "aie-faultline-replay", "aie-faultline-evals", "aie-faultline-agent"]
+dependencies = [
+    "aie-faultline-core",
+    "aie-faultline-datasets",
+    "aie-faultline-replay",
+    "aie-faultline-evals",
+    "aie-faultline-agent",
+    "aie-faultline-llm",
+]
+
+[project.scripts]
+faultline = "faultline_cli.main:main"
 
 [build-system]
 requires = ["uv_build>=0.11.20,<0.12.0"]
@@ -19,3 +29,4 @@ aie-faultline-datasets = { workspace = true }
 aie-faultline-replay = { workspace = true }
 aie-faultline-evals = { workspace = true }
 aie-faultline-agent = { workspace = true }
+aie-faultline-llm = { workspace = true }

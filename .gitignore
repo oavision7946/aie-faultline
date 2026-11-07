@@ -246,3 +246,9 @@ build/
 
 # --- Local data (never commit) ---
 /data/
+
+# --- Machine-local state and configuration ---
+/.faultline/
+/config/local/
+/.build/
+site/
