@@ -4,6 +4,3 @@ clickhouse:
   memory_limit: 2g
 capacity:
   min_free_disk_gb: 5
-postgres:
-  # Hosted CI runners are ephemeral and accept no inbound connections.
-  allow_wildcard_bind: true

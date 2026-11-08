@@ -61,7 +61,9 @@ Implemented so far:
 ```bash
 git clone https://github.com/oavision7946/aie-faultline.git
 cd aie-faultline
-cp .env.example .env        # fill in the values
+cp .env.example .env        # fill in the values. 
+                            # CLICKHOUSE_WRITER_PASSWORD and CLICKHOUSE_READONLY_PASSWORD can be 
+                            # assigned to a random number, like openssl rand -hex 24
 make setup                  # dependencies, git hooks, prerequisite check
 make up                     # start ClickHouse and PostgreSQL
 make check                  # the full local quality gate

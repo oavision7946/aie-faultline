@@ -17,6 +17,7 @@ from faultline_cli.runner import Runner
 from faultline_core.config import AppSettings, SecretStore
 
 __all__ = [
+    "POSTGRES_NETWORK",
     "SERVICES",
     "SUPABASE_EXCLUDED_CONTAINERS",
     "Service",
@@ -36,6 +37,8 @@ SUPABASE_EXCLUDED_CONTAINERS = (
 )
 CLICKHOUSE_CONTAINER = "faultline-clickhouse"
 COMPOSE_FILE = Path("infra/compose/compose.yaml")
+POSTGRES_NETWORK = "faultline-supabase"
+HOST_BINDING_OPTION = "com.docker.network.bridge.host_binding_ipv4"
 
 
 class StackError(RuntimeError):
@@ -96,7 +99,10 @@ class Stack:
         return ["docker", "compose", "-f", str(self.repo_root / COMPOSE_FILE), *args]
 
     def _supabase(self, *args: str) -> list[str]:
-        return ["supabase", *args, "--workdir", str(self.repo_root)]
+        return [
+            "supabase", *args,
+            "--network-id", POSTGRES_NETWORK, "--workdir", str(self.repo_root),
+        ]  # fmt: skip
 
     def _check(self, args: list[str], env: Mapping[str, str], what: str) -> None:
         result = self.runner.run(args, env)
@@ -124,32 +130,72 @@ class Stack:
 
     # -- Postgres (Supabase) ---------------------------------------------
 
-    def docker_default_bind_host(self) -> str:
-        """Return the address Docker publishes ports on when none is given."""
+    def _ensure_network(self) -> None:
+        """Create the Postgres network so it publishes ports only on ``bind_host``.
+
+        Docker's daemon-wide default bind address applies only to its default bridge
+        network, so the Supabase stack runs on a network created here with an explicit
+        host binding instead of one the Supabase CLI would generate.
+        """
+        bind = self.settings.bind_host
+        if _is_wildcard(bind) and not self.settings.postgres.allow_wildcard_bind:
+            raise StackError(
+                f"bind_host is {bind}, which would expose Postgres on every network "
+                "interface. Use a loopback or private address, or set "
+                "postgres.allow_wildcard_bind: true in config/local/app.yaml to accept it."
+            )
+        inspect = [
+            "docker", "network", "inspect", POSTGRES_NETWORK, "--format",
+            f'{{{{index .Options "{HOST_BINDING_OPTION}"}}}}',
+        ]  # fmt: skip
+        result = self.runner.run(inspect, self._env({}), capture=True)
+        if result.returncode != 0:
+            create = [
+                "docker", "network", "create",
+                "-o", f"{HOST_BINDING_OPTION}={bind}", POSTGRES_NETWORK,
+            ]  # fmt: skip
+            self._check(create, self._env({}), "creating the Postgres network")
+            return
+        # An empty value means Docker's default, the wildcard address.
+        existing = result.stdout.strip() or "0.0.0.0"  # nosec B104
+        if existing != bind:
+            raise StackError(
+                f"Docker network {POSTGRES_NETWORK} publishes ports on {existing}, not "
+                f"{bind}. Stop Postgres and remove it with: docker network rm {POSTGRES_NETWORK}"
+            )
+
+    def published_wildcard_ports(self) -> list[str]:
+        """Return port mappings on the Postgres network that listen on every interface."""
         args = [
-            "docker", "network", "inspect", "bridge", "--format",
-            '{{index .Options "com.docker.network.bridge.host_binding_ipv4"}}',
+            "docker", "ps", "--filter", f"network={POSTGRES_NETWORK}",
+            "--format", "{{.Names}} {{.Ports}}",
         ]  # fmt: skip
         result = self.runner.run(args, self._env({}), capture=True)
         if result.returncode != 0:
-            raise StackError("could not inspect Docker's default network")
-        # An empty value means Docker's documented default, the wildcard address.
-        return result.stdout.strip() or "0.0.0.0"  # nosec B104
-
-    def _guard_bind(self) -> None:
-        host = self.docker_default_bind_host()
-        if _is_wildcard(host) and not self.settings.postgres.allow_wildcard_bind:
-            raise StackError(
-                f"Docker publishes ports on {host} by default, which would expose Postgres "
-                "on every network interface. Set Docker's default bind address to a "
-                "loopback or private address, or set postgres.allow_wildcard_bind: true "
-                "in config/local/app.yaml to accept the exposure."
-            )
+            raise StackError("could not list published ports")
+        exposed: list[str] = []
+        for line in result.stdout.splitlines():
+            name, _, ports = line.partition(" ")
+            for mapping in filter(None, (p.strip() for p in ports.split(","))):
+                if "->" not in mapping:
+                    continue
+                host = mapping.split("->", 1)[0].rsplit(":", 1)[0].strip("[]")
+                if _is_wildcard(host):
+                    exposed.append(f"{name} {mapping}")
+        return exposed
 
     def _postgres_up(self) -> None:
-        self._guard_bind()
+        self._ensure_network()
+        env = self._env(supabase_environment(self.settings))
         args = self._supabase("start", "-x", SUPABASE_EXCLUDED_CONTAINERS)
-        self._check(args, self._env(supabase_environment(self.settings)), "starting Postgres")
+        self._check(args, env, "starting Postgres")
+        exposed = self.published_wildcard_ports()
+        if exposed and not self.settings.postgres.allow_wildcard_bind:
+            self.runner.run(self._supabase("stop"), env)
+            raise StackError(
+                "Postgres was published on every network interface and has been stopped: "
+                + "; ".join(exposed)
+            )
 
     def _postgres_down(self, volumes: bool) -> None:
         args = self._supabase("stop", *(["--no-backup"] if volumes else []))

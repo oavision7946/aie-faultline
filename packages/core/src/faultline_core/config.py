@@ -127,8 +127,9 @@ class PostgresSettings(StrictModel):
     database: str = "postgres"
     user_env: str = "POSTGRES_USER"
     password_env: str = "POSTGRES_PASSWORD"
-    # The local Postgres stack publishes ports on Docker's default bind address.
-    # Starting it is refused when that address is a wildcard, unless this is true.
+    # The local Postgres stack publishes ports on bind_host. Starting it with a
+    # wildcard bind_host, or with ports published on every interface, is refused
+    # unless this is true.
     allow_wildcard_bind: bool = False
 
 

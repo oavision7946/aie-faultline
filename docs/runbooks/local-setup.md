@@ -26,7 +26,7 @@ Set at least these in `.env`:
 
 | Variable | Used for |
 |:--|:--|
-| `CLICKHOUSE_WRITER_PASSWORD`, `CLICKHOUSE_READONLY_PASSWORD` | Passwords for the two ClickHouse users; choose any strong values |
+| `CLICKHOUSE_WRITER_PASSWORD`, `CLICKHOUSE_READONLY_PASSWORD` | Passwords for the two ClickHouse users; any random string works, for example the output of `openssl rand -hex 24` (a different value for each) |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD` | The local Supabase database credentials |
 | `ANTHROPIC_API_KEY` (and others in use) | LLM providers enabled for your environment |
 
@@ -45,13 +45,17 @@ postgres:
   port: 55432
 ```
 
-ClickHouse publishes its ports on `bind_host` (default `127.0.0.1`).
+Both services publish their ports only on `bind_host` (default `127.0.0.1`).
 
-The Supabase CLI publishes PostgreSQL on Docker's default bind address, which is all
-interfaces unless Docker is configured otherwise. `make up` refuses to start PostgreSQL in
-that case. Either set Docker's default bind address (the `ip` option of the Docker daemon
-configuration) to `127.0.0.1`, or, if the machine is not reachable from other networks,
-accept the exposure in `config/local/app.yaml`:
+PostgreSQL runs on a Docker network named `faultline-supabase`, which `make up` creates
+with `bind_host` as its host binding. Docker's daemon-wide `ip` option does not cover
+networks like this one, so the network setting is what keeps the port local. After
+starting, `make up` checks the published ports. If any of them listens on every
+interface, it stops PostgreSQL and reports an error.
+
+If you change `bind_host`, first stop PostgreSQL and remove the old network with
+`docker network rm faultline-supabase`. A wildcard `bind_host` such as `0.0.0.0` is
+refused for PostgreSQL unless you accept the exposure in `config/local/app.yaml`:
 
 ```yaml
 postgres:

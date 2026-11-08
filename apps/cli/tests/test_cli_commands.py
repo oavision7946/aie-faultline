@@ -52,7 +52,11 @@ class FakeRunner:
         return [" ".join(args) for args, _ in self.calls]
 
 
-BRIDGE = "docker network inspect bridge"
+NET_INSPECT = "docker network inspect faultline-supabase"
+NET_CREATE = "docker network create"
+PORTS = "docker ps --filter network=faultline-supabase"
+SUPA = "--network-id faultline-supabase --workdir /repo"
+LOCAL_NET = {NET_INSPECT: Completed(0, "127.0.0.1\n")}
 
 
 def settings(**overrides: object) -> AppSettings:
@@ -87,35 +91,82 @@ def test_supabase_environment_ports() -> None:
 
 
 def test_up_starts_clickhouse_and_postgres() -> None:
-    runner = FakeRunner({BRIDGE: Completed(0, "127.0.0.1\n")})
+    runner = FakeRunner(dict(LOCAL_NET))
     make_stack(runner).up()
     cmds = runner.commands()
     assert cmds[0] == "docker compose -f /repo/infra/compose/compose.yaml up -d --wait"
     assert "CREATE DATABASE IF NOT EXISTS faultline" in cmds[1]
-    assert cmds[-1] == f"supabase start -x {SUPABASE_EXCLUDED_CONTAINERS} --workdir /repo"
+    assert f"supabase start -x {SUPABASE_EXCLUDED_CONTAINERS} {SUPA}" in cmds
+    assert cmds[-1].startswith(PORTS)
     _, create_env = runner.calls[1]
     assert create_env["CLICKHOUSE_PASSWORD"] == "w-pass"
     assert "w-pass" not in cmds[1]  # never on the command line
-    _, supa_env = runner.calls[-1]
-    assert supa_env["SUPABASE_DB_PORT"] == "54322" and supa_env["PATH"] == "/bin"
+    start = next(env for args, env in runner.calls if args[:2] == ["supabase", "start"])
+    assert start["SUPABASE_DB_PORT"] == "54322" and start["PATH"] == "/bin"
 
 
-def test_postgres_refused_on_wildcard_bind() -> None:
-    runner = FakeRunner({BRIDGE: Completed(0, "0.0.0.0\n")})
-    with pytest.raises(StackError, match="every network interface"):
+def test_postgres_network_created_with_bind_host() -> None:
+    runner = FakeRunner({NET_INSPECT: Completed(1, "")})
+    make_stack(runner, bind_host="100.64.0.1").up(["postgres"])
+    create = next(c for c in runner.commands() if c.startswith(NET_CREATE))
+    assert create == (
+        "docker network create -o "
+        "com.docker.network.bridge.host_binding_ipv4=100.64.0.1 faultline-supabase"
+    )
+
+
+def test_postgres_network_failure_to_create() -> None:
+    runner = FakeRunner({NET_INSPECT: Completed(1, ""), NET_CREATE: Completed(1, "")})
+    with pytest.raises(StackError, match="creating the Postgres network failed"):
+        make_stack(runner).up(["postgres"])
+
+
+@pytest.mark.parametrize("existing", ["0.0.0.0\n", "", "192.168.1.5"])
+def test_postgres_refused_on_mismatched_network(existing: str) -> None:
+    runner = FakeRunner({NET_INSPECT: Completed(0, existing)})
+    with pytest.raises(StackError, match="docker network rm faultline-supabase"):
         make_stack(runner).up(["postgres"])
     assert not any(c.startswith("supabase start") for c in runner.commands())
 
 
+def test_postgres_refused_on_wildcard_bind_host() -> None:
+    runner = FakeRunner()
+    with pytest.raises(StackError, match="every network interface"):
+        make_stack(runner, bind_host="0.0.0.0").up(["postgres"])
+    assert runner.commands() == []
+
+
 def test_postgres_wildcard_allowed_by_setting() -> None:
-    runner = FakeRunner({BRIDGE: Completed(0, "")})  # empty means Docker's default, 0.0.0.0
-    make_stack(runner, postgres={"allow_wildcard_bind": True}).up(["postgres"])
-    assert runner.commands()[-1].startswith("supabase start")
+    runner = FakeRunner({NET_INSPECT: Completed(0, "0.0.0.0")})
+    stack = make_stack(runner, bind_host="0.0.0.0", postgres={"allow_wildcard_bind": True})
+    stack.up(["postgres"])
+    assert any(c.startswith("supabase start") for c in runner.commands())
 
 
-def test_bind_inspection_failure() -> None:
-    runner = FakeRunner({BRIDGE: Completed(1, "")})
-    with pytest.raises(StackError, match="inspect"):
+@pytest.mark.parametrize(
+    "ports",
+    [
+        "supabase_db_x 0.0.0.0:54322->5432/tcp, [::]:54322->5432/tcp\n",
+        "supabase_db_x :::54322->5432/tcp\n",
+    ],
+)
+def test_postgres_stopped_when_published_on_wildcard(ports: str) -> None:
+    runner = FakeRunner({**LOCAL_NET, PORTS: Completed(0, ports)})
+    with pytest.raises(StackError, match="has been stopped: supabase_db_x"):
+        make_stack(runner).up(["postgres"])
+    assert runner.commands()[-1] == f"supabase stop {SUPA}"
+
+
+def test_published_ports_on_loopback_pass() -> None:
+    ports = "supabase_db_x 127.0.0.1:54322->5432/tcp, 5433/tcp\nother\n"
+    runner = FakeRunner({**LOCAL_NET, PORTS: Completed(0, ports)})
+    make_stack(runner).up(["postgres"])
+    assert make_stack(runner).published_wildcard_ports() == []
+
+
+def test_published_ports_listing_failure() -> None:
+    runner = FakeRunner({**LOCAL_NET, PORTS: Completed(1, "")})
+    with pytest.raises(StackError, match="could not list published ports"):
         make_stack(runner).up(["postgres"])
 
 
@@ -126,11 +177,11 @@ def test_failed_command_raises() -> None:
 
 
 def test_reset_deletes_volumes_then_starts() -> None:
-    runner = FakeRunner({BRIDGE: Completed(0, "127.0.0.1")})
+    runner = FakeRunner(dict(LOCAL_NET))
     make_stack(runner).reset()
     cmds = runner.commands()
     assert cmds[0].endswith("down -v")
-    assert cmds[1] == "supabase stop --no-backup --workdir /repo"
+    assert cmds[1] == f"supabase stop --no-backup {SUPA}"
     assert any(c.endswith("up -d --wait") for c in cmds[2:])
 
 
@@ -142,9 +193,9 @@ def test_down_keeps_data_and_db_reset_and_status() -> None:
     assert stack.status() == 0
     cmds = runner.commands()
     assert cmds[0].endswith("compose.yaml down")
-    assert cmds[1] == "supabase stop --workdir /repo"
-    assert cmds[2] == "supabase db reset --local --workdir /repo"
-    assert cmds[-1] == "supabase status --workdir /repo"
+    assert cmds[1] == f"supabase stop {SUPA}"
+    assert cmds[2] == f"supabase db reset --local {SUPA}"
+    assert cmds[-1] == f"supabase status {SUPA}"
 
 
 # -- host checks -----------------------------------------------------------
@@ -243,7 +294,7 @@ def test_cli_llm_check(repo: Path, monkeypatch: pytest.MonkeyPatch,
 def test_cli_stack_commands(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     for name, value in SECRETS.items():
         monkeypatch.setenv(name, value)
-    runner = FakeRunner({BRIDGE: Completed(0, "127.0.0.1")})
+    runner = FakeRunner(dict(LOCAL_NET))
     for argv in (["stack", "up", "clickhouse"], ["stack", "down"], ["stack", "reset", "postgres"],
                  ["stack", "db-reset"], ["stack", "status"]):  # fmt: skip
         assert cli.main(argv, runner) == 0, argv

@@ -20,8 +20,10 @@ The `faultline` command (`uv run faultline --help`):
 `--env` overrides the selected environment for one command. The `Makefile` wraps these
 commands (`make up`, `make llm-check`, ...).
 
-The Postgres stack publishes ports on Docker's default bind address. `stack up` refuses to
-start it when that address is a wildcard, unless `postgres.allow_wildcard_bind` is true.
+The Postgres stack runs on the Docker network `faultline-supabase`, which `stack up` creates
+with `bind_host` as its host binding. After starting, `stack up` checks the published
+ports. If any of them listens on every interface, it stops Postgres and fails. A wildcard
+`bind_host` is refused unless `postgres.allow_wildcard_bind` is true.
 
 ## Configuration
 
