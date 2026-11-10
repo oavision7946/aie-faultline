@@ -51,29 +51,30 @@ models:
     # Prompts up to 100K tokens; longer prompts are billed at a higher rate.
     pricing: {input_per_mtok: "0.10", output_per_mtok: "0.50", effective_date: 2026-10-06}
 
-  # Local models: context window and capability flags must be confirmed against
-  # the serving stack before use.
-  - id: qwen3.5-27b-q8
+  # Local models, served by an OpenAI-compatible server. model_name must match the
+  # server's served model name. With thinking enabled, keep max_output_tokens large
+  # enough for the reasoning plus the answer, or structured output can be truncated.
+  - id: qwen3.8-27b-fp8
     provider: local
-    model_name: Qwen/Qwen3.5-27B
+    model_name: Qwen/Qwen3.8-27B-FP8
     roles: [investigator]
-    context_window: 131072
+    context_window: 262144
     capabilities: {tool_calling: true, structured_output: true}
     defaults: {max_output_tokens: 8000, timeout_s: 1800, max_retries: 1, temperature: 0.2}
-    pricing: {input_per_mtok: "0", output_per_mtok: "0", effective_date: 2026-11-07}
+    pricing: {input_per_mtok: "0", output_per_mtok: "0", effective_date: 2026-11-08}
     limits: {max_concurrency: 2}
-    local: {quantization: 8-bit, serving_stack: to-be-confirmed}
+    local: {quantization: fp8, serving_stack: vllm}
 
-  - id: qwen3.5-27b-q4
+  - id: qwen3.8-27b-nvfp4
     provider: local
-    model_name: Qwen/Qwen3.5-27B
+    model_name: nvidia/Qwen3.8-27B-NVFP4
     roles: [investigator]
-    context_window: 131072
+    context_window: 262144
     capabilities: {tool_calling: true, structured_output: true}
     defaults: {max_output_tokens: 8000, timeout_s: 1800, max_retries: 1, temperature: 0.2}
-    pricing: {input_per_mtok: "0", output_per_mtok: "0", effective_date: 2026-11-07}
+    pricing: {input_per_mtok: "0", output_per_mtok: "0", effective_date: 2026-11-08}
     limits: {max_concurrency: 2}
-    local: {quantization: 4-bit, serving_stack: to-be-confirmed}
+    local: {quantization: nvfp4, serving_stack: vllm}
 
 profiles:
   iterate:
@@ -85,4 +86,4 @@ profiles:
     investigator: claude-opus-5-5
     judge: claude-opus-5-5
   private_local:
-    investigator: qwen3.5-27b-q8
+    investigator: qwen3.8-27b-nvfp4
